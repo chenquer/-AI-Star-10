@@ -1,12 +1,12 @@
 # GitHub AI Star 月报
 
-工作流计划于每月 1 日北京时间 09:00 执行，收集 GitHub Trending 月榜中名称或简介含 AI 相关关键词的项目，按页面显示的本月新增 Stars 排序，邮件发送前 10 名到 chenhello892@gmail.com。
+每月 1 日北京时间 09:00，工作流会收集 GitHub Trending 月榜中项目名称或简介含 AI 关键词的项目，按近 30 天新增 Stars 排序，并将前 10 名发到飞书群。
 
-## 还需要设置 Gmail 密钥
+## 设置飞书机器人
 
-在仓库页面打开 **Settings → Secrets and variables → Actions → New repository secret**，添加：
+1. 在飞书群里添加自定义机器人，复制它提供的 Webhook 地址。
+2. 在本仓库打开 **Settings → Secrets and variables → Actions → New repository secret**。
+3. 名称填 `FEISHU_WEBHOOK`，值填机器人的 Webhook 地址。不要把地址发到聊天里。
+4. 到 **Actions → Monthly GitHub AI Star report (Feishu) → Run workflow** 手动运行一次验证。
 
-- `GMAIL_ADDRESS`：用于发信的 Gmail 地址
-- `GMAIL_APP_PASSWORD`：该 Gmail 账号生成的应用专用密码（不是 Gmail 登录密码）
-
-设置完成后，可以在 **Actions → Monthly GitHub AI Star report → Run workflow** 手动试发一次。定时工作流需保持启用。
+榜单按 GitHub Trending 月榜和项目名称、简介中的 AI 关键词筛选，可能不包含未出现在榜单上的项目。
