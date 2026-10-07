@@ -113,7 +113,7 @@ def make_text(items: list[dict]) -> str:
             "",
         ])
     lines.append("说明：根据 GitHub Trending 月榜及项目名称、简介中的 AI 关键词筛选。")
-    return "\\n".join(lines)
+    return "\n".join(lines)
 
 
 def send_feishu(items: list[dict]) -> None:
