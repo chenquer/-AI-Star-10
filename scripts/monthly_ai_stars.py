@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Email a monthly snapshot of AI-related repositories trending on GitHub."""
+"""Send a monthly AI Star snapshot from GitHub to Feishu."""
 
 from __future__ import annotations
 
 import os
 import re
-import smtplib
-from email.message import EmailMessage
 from html import unescape
 from urllib.parse import quote
 
@@ -97,59 +95,41 @@ def collect() -> list[dict]:
     return ranked
 
 
-def make_email(items: list[dict]) -> EmailMessage:
-    sender = os.environ["GMAIL_ADDRESS"]
-    recipient = os.environ.get("RECIPIENT_EMAIL", "chenhello892@gmail.com")
-    month = __import__("datetime").date.today().strftime("%Y年%m月")
-    rows = []
-    text_rows = []
-    for index, item in enumerate(items, 1):
-        description = item["description"] or "（GitHub 未提供项目简介）"
-        rows.append(
-            "<tr>"
-            f"<td>{index}</td>"
-            f'<td><a href="{item["url"]}">{item["name"]}</a></td>'
-            f'<td>{item["monthly_stars"]:,}</td>'
-            f"<td>{description}</td>"
-            "</tr>"
-        )
-        text_rows.append(
-            f'{index}. {item["name"]} +{item["monthly_stars"]:,} stars\n'
-            f'   {item["url"]}\n   {description}'
-        )
+def make_text(items: list[dict]) -> str:
+    from datetime import date
 
-    message = EmailMessage()
-    message["Subject"] = f"{month} GitHub AI 项目 Star 增长榜 Top 10"
-    message["From"] = sender
-    message["To"] = recipient
-    message.set_content(
-        f"{month} GitHub AI 项目 Star 增长榜 Top 10\n\n"
-        + "\n\n".join(text_rows)
-        + "\n\n统计口径：GitHub Trending 月榜中识别为 AI 相关的项目，按页面显示的本月新增 stars 排序。"
-    )
-    table = "".join(rows)
-    message.add_alternative(
-        "<html><body>"
-        f"<h2>{month} GitHub AI 项目 Star 增长榜 Top 10</h2>"
-        "<p>按 GitHub Trending 月榜页面显示的本月新增 stars 排序。"
-        "项目通过名称和简介中的 AI 相关关键词识别。</p>"
-        "<table border='1' cellpadding='6' cellspacing='0'>"
-        "<thead><tr><th>排名</th><th>项目</th><th>本月新增 Stars</th><th>简介</th></tr></thead>"
-        f"<tbody>{table}</tbody></table>"
-        "</body></html>",
-        subtype="html",
-    )
-    return message
+    report_date = date.today().isoformat()
+    lines = [
+        f"截至 {report_date} 的近 30 天 GitHub AI 项目 Star 增长榜 Top 10",
+        "按 GitHub Trending 月榜显示的新增 Stars 排序：",
+        "",
+    ]
+    for index, item in enumerate(items, 1):
+        description = item["description"] or "GitHub 未提供项目简介"
+        lines.extend([
+            f'{index}. {item["name"]}  +{item["monthly_stars"]:,} Stars',
+            item["url"],
+            description,
+            "",
+        ])
+    lines.append("说明：根据 GitHub Trending 月榜及项目名称、简介中的 AI 关键词筛选。")
+    return "\\n".join(lines)
+
+
+def send_feishu(items: list[dict]) -> None:
+    webhook = os.environ["FEISHU_WEBHOOK"]
+    payload = {"msg_type": "text", "content": {"text": make_text(items)}}
+    response = requests.post(webhook, json=payload, timeout=30)
+    response.raise_for_status()
+    result = response.json()
+    if result.get("code", 0) != 0:
+        raise RuntimeError(f"Feishu bot returned an error: {result}")
 
 
 def main() -> None:
     items = collect()
-    message = make_email(items)
-    with smtplib.SMTP("smtp.gmail.com", 587, timeout=30) as smtp:
-        smtp.starttls()
-        smtp.login(os.environ["GMAIL_ADDRESS"], os.environ["GMAIL_APP_PASSWORD"])
-        smtp.send_message(message)
-    print(f"Sent monthly AI Star report to {message['To']} ({len(items)} projects).")
+    send_feishu(items)
+    print(f"Sent monthly AI Star report to Feishu ({len(items)} projects).")
 
 
 if __name__ == "__main__":
